@@ -129,3 +129,351 @@ This section documents the successful API interactions using Postman. The operat
 
 **Screenshot:**
 <img width="2880" height="1800" alt="image" src="https://github.com/user-attachments/assets/d4b55aca-1a3d-4dbe-95bb-0916eb8b53b7" />
+
+_______________
+
+# Task API Documentation: Task 2 - Secure Command Execution
+
+## Containerizing the Application with Docker 🐳
+
+A **multi-stage build** is used to create a lightweight final image for the application. This approach separates the build environment (which has tools like Maven) from the runtime environment (which only needs the JRE), resulting in a much smaller and more secure final image.
+
+### Dockerfile
+
+```dockerfile
+# Stage 1: Build the application
+FROM maven:3.8.5-openjdk-17 AS build
+WORKDIR /app
+COPY . .
+RUN mvn clean package -DskipTests
+
+# Stage 2: Create the final, slim image
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8080
+CMD ["java", "-jar", "app.jar"]
+```
+
+## ⚙️ Build and Push Commands
+
+Replace `your-dockerhub-username` with your actual Docker Hub username.
+
+### 🏗️ 1. Build the Docker Image
+This command builds the image locally and tags it with your Docker Hub repository name and the tag `latest`.
+
+```bash
+docker build -t your-dockerhub-username/kaiburr-task-app:latest .
+```
+
+### ☁️ 2. Push the Docker Image (Section 3.5 Step 1)
+
+This command uploads the built image to your Docker Hub repository, making it accessible for deployment on Kubernetes.
+
+```bash
+docker push your-dockerhub-username/kaiburr-task-app:latest
+```
+
+## 🗄️ Section 3.2: Deploying MongoDB with Persistent Storage
+
+The database uses a **StatefulSet** for stability and a **PersistentVolumeClaim (PVC)** to ensure data persists across container restarts.
+
+---
+
+### 📄 mongodb-statefulset.yaml
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-service
+spec:
+  selector:
+    app: mongo
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+spec:
+  serviceName: "mongo-service"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:latest
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongo-persistent-storage
+              mountPath: /data/db
+  volumeClaimTemplates:
+    - metadata:
+        name: mongo-persistent-storage
+      spec:
+        accessModes:
+          - ReadWriteOnce # Required access mode for a single-replica StatefulSet
+        resources:
+          requests:
+            storage: 1Gi
+```
+
+## 🚀 Section 3.3: Crafting Kubernetes Manifests for the Application
+
+The **Deployment** manages the application container, connecting to **MongoDB** via the service name (`mongo-service`).  
+The **Service** exposes the application using **NodePort**.
+
+---
+
+### 📄 deployment.yaml
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-api-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: task-api
+  template:
+    metadata:
+      labels:
+        app: task-api
+    spec:
+      # serviceAccountName: task-api-sa will be added in Section 3.4
+      containers:
+        - name: task-api
+          image: your-dockerhub-username/kaiburr-task-app:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: spring.data.mongodb.uri
+              # Uses the Kubernetes Service name for MongoDB discovery
+              value: "mongodb://mongo-service:27017/kaiburr_db"
+```
+
+### 📄 service.yaml
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: task-api-service
+spec:
+  type: NodePort
+  selector:
+    app: task-api
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080 # Accessible on the host machine
+```
+
+## ⚙️ Section 3.4: The Core Challenge: Programmatic Pod Creation
+
+This section implements the **Operator Pattern** using the Kubernetes Java Client for task execution.
+
+### 1. Add Dependency (in pom.xml)
+
+```xml
+<dependency>
+  <groupId>io.kubernetes</groupId>
+  <artifactId>client-java</artifactId>
+  <version>19.0.0</version>
+</dependency>
+```
+
+### 2. Configure RBAC
+
+The application needs a **ServiceAccount**, a **Role** to manage pods (create, get, delete, etc.), and a **RoleBinding** to link them.
+
+### 📄 rbac.yaml
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: task-api-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-manager-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pod-manager-binding
+subjects:
+  - kind: ServiceAccount
+    name: task-api-sa
+roleRef:
+  kind: Role
+  name: pod-manager-role
+  apiGroup: rbac.authorization.k8s.io
+```
+
+### Update deployment.yaml
+
+Add the **ServiceAccount** to the Deployment spec:
+
+```yaml
+# ... inside spec.template.spec
+spec:
+  serviceAccountName: task-api-sa # ADD THIS LINE
+  containers:
+# ...
+```
+
+### 3. Implement in Java (Refactor TaskService)
+
+The execution logic is refactored to: 
+1. Initialize the client,  
+2. Define a temporary `V1Pod` with `busybox` and `restartPolicy: Never`,  
+3. Create the Pod,  
+4. Poll its status until `Succeeded` or `Failed`,  
+5. Read logs, and  
+6. Crucially, delete the Pod in a `finally` block.
+
+```java
+import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.openapi.Configuration;
+import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1PodBuilder;
+import io.kubernetes.client.util.Config;
+
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
+public String executeTaskCommand(String command) throws Exception {
+    // 1. Authentication (in-cluster config)
+    ApiClient client = Config.defaultClient();
+    Configuration.setDefaultApiClient(client);
+    CoreV1Api api = new CoreV1Api();
+
+    final String podName = "command-runner-" + System.currentTimeMillis();
+    final String namespace = "default";
+    String result = "";
+
+    // 2. Pod Definition
+    V1Pod pod = new V1PodBuilder()
+            .withNewMetadata().withName(podName).endMetadata()
+            .withNewSpec()
+                .addNewContainer()
+                    .withName("executor")
+                    .withImage("busybox")
+                    .withCommand("sh", "-c")
+                    .withArgs(command) 
+                .endContainer()
+                .withRestartPolicy("Never")
+            .endSpec()
+            .build();
+
+    try {
+        // 3. Execution Flow: Create Pod
+        api.createNamespacedPod(namespace, pod, null, null, null, null);
+        
+        // 3. Execution Flow: Wait for Completion
+        String phase;
+        do {
+            TimeUnit.SECONDS.sleep(3);
+            V1Pod currentPod = api.readNamespacedPod(podName, namespace, null);
+            phase = currentPod.getStatus().getPhase();
+        } while (phase.equals("Pending") || phase.equals("Running"));
+
+        // 3. Execution Flow: Retrieve Logs
+        if (phase.equals("Succeeded")) {
+            result = api.readNamespacedPodLog(podName, namespace, "executor", null, null, null, null, null, null, null, null, null);
+        } else {
+            result = "Pod failed with phase: " + phase;
+        }
+    } catch (ApiException e) {
+        result = "Kubernetes API Error: " + e.getResponseBody();
+    } finally {
+        // 4. Crucial: Clean up the temporary pod
+        try {
+            api.deleteNamespacedPod(podName, namespace, null, null, null, null, null, null);
+        } catch (ApiException e) {
+            System.err.println("Error deleting pod: " + e.getMessage());
+        }
+    }
+    return result;
+}
+```
+
+## 🚀 Section 3.5: Launch and Verification
+
+1. Push Docker Image (Completed in Section 3.1)  
+2. Deploy to Kubernetes
+
+```bash
+kubectl apply -f mongodb-statefulset.yaml
+kubectl apply -f rbac.yaml
+kubectl apply -f deployment.yaml # Updated with serviceAccountName
+kubectl apply -f service.yaml
+```
+
+### 3. Verification Commands
+
+| Command              | Purpose                  | Expected Status                                  |
+|----------------------|--------------------------|-------------------------------------------------|
+| kubectl get pods      | Verify container health  | mongo-0 and task-api-deployment-... must be Running |
+| kubectl get svc       | Verify network exposure  | task-api-service must show NodePort 30080       |
+| kubectl get nodes     | Check cluster readiness  | Nodes must be Ready                              |
+
+<img width="2880" height="1800" alt="image" src="https://github.com/user-attachments/assets/719d88ed-e917-4e37-8510-22c785c859d1" />
+
+
+### 4. Full Testing and Validation (CRUD & Operator)
+
+Use `curl` to test the API via the NodePort `30080`.
+
+#### A. POST (Create Task)
+
+```bash
+curl -X POST http://localhost:30080/tasks \
+     -H "Content-Type: application/json" \
+     -d '{
+            "name": "Kubernets Deployment and Integration",  
+            "owner": "Jane Doe",
+            "command": "echo 'System Deployed'"
+         }
+# Expected: Returns the created JSON object.
+```
+
+<img width="2880" height="1800" alt="image" src="https://github.com/user-attachments/assets/e7a4066f-51be-4894-8fd9-e42dc00c20e4" />
+
+
+### B. GET (Read Tasks)
+
+```bash
+curl http://localhost:30080/tasks
+# Expected: Returns the JSON array containing the task T101.
+```
+
+<img width="2880" height="1800" alt="image" src="https://github.com/user-attachments/assets/e9b08fc6-b8d6-4861-8b22-bf5ea9ab6cfc" />
+
+
+
+
+
