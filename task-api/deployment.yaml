@@ -1,0 +1,26 @@
+apiVersion: apps/v1 
+kind: Deployment 
+metadata: 
+  name: task-api-deployment 
+spec: 
+  replicas: 1 
+  selector: 
+    matchLabels: 
+      app: task-api 
+  template: 
+    metadata: 
+      labels: 
+        app: task-api 
+    spec: 
+      # 1. Service Account (Crucial for Task 2)
+      serviceAccountName: task-api-sa 
+      containers: 
+        # 2. Container definition starts here (Line 15 may be around this area)
+        - name: task-api 
+          image: abhiram007/kaiburr-task-app:latest 
+          ports: 
+            - containerPort: 8081 
+          env: 
+            # 3. Environment variable for MongoDB URI
+            - name: spring.data.mongodb.uri 
+              value: "mongodb://mongo-service:27017/kaiburr-tasks"

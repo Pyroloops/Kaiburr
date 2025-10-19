@@ -23,12 +23,13 @@ public interface TaskService {
 
     /**
      * Securely executes the command associated with a Task (Section 2.5).
-     * This is the core logic for command injection prevention and execution history tracking.
+     * This method is refactored for Task 2 to programmatically create a
+     * Kubernetes pod to run the command, retrieve the output, and clean up.
      *
      * @param id The ID of the Task to execute.
      * @return The updated Task object including the new TaskExecution history.
-     * @throws IOException If the command execution fails.
-     * @throws InterruptedException If the execution process is interrupted.
+     * @throws IOException If the command execution fails (e.g., K8s API communication error).
+     * @throws InterruptedException If the execution process is interrupted (e.g., during wait loop).
      * @throws SecurityException If the command is not in the allowlist.
      */
     Task executeTask(String id) throws IOException, InterruptedException, SecurityException;
