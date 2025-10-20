@@ -45,6 +45,14 @@ server.port=8081
 
 ## 2. Build the Project
 
+Clone the repository:
+
+```bash
+git clone [https://github.com/TwsitedWizard/kaiburr-backend-assessment.git](https://github.com/TwsitedWizard/kaiburr-backend-assessment.git)
+cd kaiburr-backend-assessment/task-api
+```
+Ensure MongoDB is running: Make sure your local MongoDB server is active on the default port 27017.
+
 Open your terminal in the project's root directory (`task-api/`) and run the Maven clean install command to compile the code and package it into an executable JAR file:
 
 ```bash
