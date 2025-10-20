@@ -27,9 +27,9 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-m2-
 
-    # Code Build Step
+    # Code Build Step (Already Fixed)
     - name: Build with Maven
-      # FIX: Corrected the path to pom.xml, assuming it is in a subdirectory named 'task-api'
+      # We changed this to point to the subdirectory
       run: mvn -B package --file task-api/pom.xml -DskipTests
 
     # Docker Build and Push Steps
@@ -42,7 +42,7 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v4
       with:
-        # NOTE: If your Dockerfile is NOT in the root, you must change this context line.
-        context: . 
+        # FIX: Changed the context to point to the subdirectory containing the Dockerfile
+        context: task-api 
         push: true
         tags: ${{ secrets.DOCKERHUB_USERNAME }}/kaiburr-task-app:latest
