@@ -581,6 +581,8 @@ jobs:
 - **Monitor:** Go to the **Actions** tab on GitHub to monitor the workflow run status.  
 - **Artifact:** Upon successful completion, the new Docker image will be available in your Docker Hub repository with the tag `latest` (and potentially other tags you define).  
 - **Status:** The overall workflow status can be viewed directly on the **Actions** tab, showing a green checkmark for success.
+<img width="2879" height="1717" alt="image" src="https://github.com/user-attachments/assets/b1a1f518-fa93-4b00-9916-58d87c6b4b34" />
+
 
 
 
