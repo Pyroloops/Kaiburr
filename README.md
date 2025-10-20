@@ -29,14 +29,14 @@ Before running the application, ensure you have the following installed:
 
 # Task 1 - Engineering a Robust Java REST API 
 
-## Setup and Running
+## 1. Setup and Running
 
-### Database Configuration
+### 1.1 Database Configuration
 
 The application is configured to connect to a local MongoDB instance.
 Ensure the following configuration is present in `src/main/resources/application.properties`:
 
-### MongoDB Configuration
+### 1.2 MongoDB Configuration
 
 ```properties
 spring.data.mongodb.host = localhost
@@ -44,13 +44,13 @@ spring.data.mongodb.port = 27017
 spring.data.mongodb.database = kaiburr-tasks
 ```
 
-## Server Port Configuration 
+## 1.3 Server Port Configuration 
 
 ```properties
 server.port=8081
 ```
 
-## Build the Project
+## 2. Build the Project
 
 Clone the repository:
 
@@ -66,7 +66,7 @@ Open your terminal in the project's root directory (`task-api/`) and run the Mav
 mvn clean install
 ```
 
-## Run the Application
+## 3. Run the Application
 
 Start the Spring Boot application using the generated JAR file:
 
@@ -75,7 +75,7 @@ java -jar target/task-api-0.0.1-SNAPSHOT.jar
 ```
 The application will start and should be accessible at `http://localhost:8081`. You will see confirmation in the console:
 
-##API Endpoints Reference
+## 4. API Endpoints Reference
 
 All endpoints use the base URL: `http://localhost:8081/tasks`
 
@@ -89,7 +89,7 @@ All endpoints use the base URL: `http://localhost:8081/tasks`
 | **DELETE** | `/tasks/{id}` | Deletes a task by its unique ID. | None | `204 No Content` |
 | **PUT** | `/tasks/execute/{id}` | **Core Feature:** Executes the shell command defined in the task and records the execution result and history. | None | `200 OK` (Task with updated taskExecutions) |
 
-## Example Task Execution Request
+## 5. Example Task Execution Request
 
 The task execution endpoint is a critical feature. For a task with ID `68f405870da6f8c914f5f794`:
 
@@ -120,7 +120,7 @@ The task object will be returned with a new entry added to the `taskExecutions` 
 }
 ```
 
-## Validation Screenshots
+## 6. Validation Screenshots
 
 This section documents the successful API interactions using Postman. The operating system's taskbar showing your name and the current date/time should be visible in the screenshots.
 
@@ -147,7 +147,7 @@ This section documents the successful API interactions using Postman. The operat
 
 _______________
 
-# Task API Documentation: Task 2 - Secure Command Execution
+# Task 2 - Deploying and Integrating with Kubernetes
 
 ## Containerizing the Application with Docker 
 
@@ -170,18 +170,18 @@ EXPOSE 8080
 CMD ["java", "-jar", "app.jar"]
 ```
 
-## Build and Push Commands
+## 1. Build and Push Commands
 
 Replace `your-dockerhub-username` with your actual Docker Hub username.
 
-### Build the Docker Image
+### 1.1 Build the Docker Image
 This command builds the image locally and tags it with your Docker Hub repository name and the tag `latest`.
 
 ```bash
 docker build -t your-dockerhub-username/kaiburr-task-app:latest .
 ```
 
-### Push the Docker Image (Section 3.5 Step 1)
+### 1.2 Push the Docker Image (Section 3.5 Step 1)
 
 This command uploads the built image to your Docker Hub repository, making it accessible for deployment on Kubernetes.
 
@@ -189,13 +189,13 @@ This command uploads the built image to your Docker Hub repository, making it ac
 docker push your-dockerhub-username/kaiburr-task-app:latest
 ```
 
-## Deploying MongoDB with Persistent Storage
+## 2. Deploying MongoDB with Persistent Storage
 
 The database uses a **StatefulSet** for stability and a **PersistentVolumeClaim (PVC)** to ensure data persists across container restarts.
 
 ---
 
-### 📄 mongodb-statefulset.yaml
+### 2.1 mongodb-statefulset.yaml
 
 ```yaml
 apiVersion: v1
@@ -238,20 +238,20 @@ spec:
         name: mongo-persistent-storage
       spec:
         accessModes:
-          - ReadWriteOnce # Required access mode for a single-replica StatefulSet
+          - ReadWriteOnce 
         resources:
           requests:
             storage: 1Gi
 ```
 
-## Crafting Kubernetes Manifests for the Application
+## 3. Crafting Kubernetes Manifests for the Application
 
 The **Deployment** manages the application container, connecting to **MongoDB** via the service name (`mongo-service`).  
 The **Service** exposes the application using **NodePort**.
 
 ---
 
-### deployment.yaml
+### 3.1 deployment.yaml
 
 ```yaml
 apiVersion: apps/v1
@@ -268,7 +268,6 @@ spec:
       labels:
         app: task-api
     spec:
-      # serviceAccountName: task-api-sa will be added in Section 3.4
       containers:
         - name: task-api
           image: your-dockerhub-username/kaiburr-task-app:latest
@@ -276,11 +275,10 @@ spec:
             - containerPort: 8080
           env:
             - name: spring.data.mongodb.uri
-              # Uses the Kubernetes Service name for MongoDB discovery
               value: "mongodb://mongo-service:27017/kaiburr_db"
 ```
 
-### service.yaml
+### 3.2 service.yaml
 
 ```yaml
 apiVersion: v1
@@ -295,14 +293,14 @@ spec:
     - protocol: TCP
       port: 8080
       targetPort: 8080
-      nodePort: 30080 # Accessible on the host machine
+      nodePort: 30080 
 ```
 
-## The Core Challenge: Programmatic Pod Creation
+## 4. Programmatic Pod Creation
 
 This section implements the **Operator Pattern** using the Kubernetes Java Client for task execution.
 
-### 1. Add Dependency (in pom.xml)
+### 4.1 Add Dependency (in pom.xml)
 
 ```xml
 <dependency>
@@ -312,11 +310,11 @@ This section implements the **Operator Pattern** using the Kubernetes Java Clien
 </dependency>
 ```
 
-### 2. Configure RBAC
+### 4.2 Configure RBAC
 
 The application needs a **ServiceAccount**, a **Role** to manage pods (create, get, delete, etc.), and a **RoleBinding** to link them.
 
-### rbac.yaml
+### 4.3 rbac.yaml
 
 ```yaml
 apiVersion: v1
@@ -346,7 +344,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-### Update deployment.yaml
+### 4.3 Update deployment.yaml
 
 Add the **ServiceAccount** to the Deployment spec:
 
@@ -358,7 +356,7 @@ spec:
 # ...
 ```
 
-### 3. Implement in Java (Refactor TaskService)
+### 4.4 Implement in Java (Refactor TaskService)
 
 The execution logic is refactored to: 
 1. Initialize the client,  
@@ -436,7 +434,7 @@ public String executeTaskCommand(String command) throws Exception {
 }
 ```
 
-## Launch and Verification
+## 5. Launch and Verification
 
 1. Push Docker Image (Completed in Section 3.1)  
 2. Deploy to Kubernetes
@@ -448,7 +446,7 @@ kubectl apply -f deployment.yaml # Updated with serviceAccountName
 kubectl apply -f service.yaml
 ```
 
-### 3. Verification Commands
+### 5.1 Verification Commands
 
 | Command              | Purpose                  | Expected Status                                  |
 |----------------------|--------------------------|-------------------------------------------------|
@@ -459,7 +457,7 @@ kubectl apply -f service.yaml
 <img width="2880" height="1800" alt="image" src="https://github.com/user-attachments/assets/719d88ed-e917-4e37-8510-22c785c859d1" />
 
 
-### 4. Full Testing and Validation (CRUD & Operator)
+### 5.2 Full Testing and Validation (CRUD & Operator)
 
 Use `curl` to test the API via the NodePort `30080`.
 
@@ -488,7 +486,7 @@ curl http://localhost:30080/tasks
 
 <img width="2880" height="1800" alt="image" src="https://github.com/user-attachments/assets/e9b08fc6-b8d6-4861-8b22-bf5ea9ab6cfc" />
 
-# Task 4: Automated CI/CD Pipeline
+# Task 4 - Automated CI/CD Pipeline
 
 This project utilizes **GitHub Actions** to implement a Continuous Integration (CI) pipeline. This automation ensures that every code change pushed to the main branch is automatically built, tested, and packaged into a versioned Docker image, which is then pushed to Docker Hub.  
 
