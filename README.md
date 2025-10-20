@@ -73,7 +73,7 @@ java -jar target/task-api-0.0.1-SNAPSHOT.jar
 ```
 The application will start and should be accessible at `http://localhost:8081`. You will see confirmation in the console:
 
-## 🌐 API Endpoints Reference
+##API Endpoints Reference
 
 All endpoints use the base URL: `http://localhost:8081/tasks`
 
@@ -118,7 +118,7 @@ The task object will be returned with a new entry added to the `taskExecutions` 
 }
 ```
 
-## 📸 Validation Screenshots
+## Validation Screenshots
 
 This section documents the successful API interactions using Postman. The operating system's taskbar showing your name and the current date/time should be visible in the screenshots.
 
@@ -147,7 +147,7 @@ _______________
 
 # Task API Documentation: Task 2 - Secure Command Execution
 
-## Containerizing the Application with Docker 🐳
+## Containerizing the Application with Docker 
 
 A **multi-stage build** is used to create a lightweight final image for the application. This approach separates the build environment (which has tools like Maven) from the runtime environment (which only needs the JRE), resulting in a much smaller and more secure final image.
 
@@ -168,18 +168,18 @@ EXPOSE 8080
 CMD ["java", "-jar", "app.jar"]
 ```
 
-## ⚙️ Build and Push Commands
+## Build and Push Commands
 
 Replace `your-dockerhub-username` with your actual Docker Hub username.
 
-### 🏗️ 1. Build the Docker Image
+### Build the Docker Image
 This command builds the image locally and tags it with your Docker Hub repository name and the tag `latest`.
 
 ```bash
 docker build -t your-dockerhub-username/kaiburr-task-app:latest .
 ```
 
-### ☁️ 2. Push the Docker Image (Section 3.5 Step 1)
+### Push the Docker Image (Section 3.5 Step 1)
 
 This command uploads the built image to your Docker Hub repository, making it accessible for deployment on Kubernetes.
 
@@ -187,7 +187,7 @@ This command uploads the built image to your Docker Hub repository, making it ac
 docker push your-dockerhub-username/kaiburr-task-app:latest
 ```
 
-## 🗄️ Section 3.2: Deploying MongoDB with Persistent Storage
+## Deploying MongoDB with Persistent Storage
 
 The database uses a **StatefulSet** for stability and a **PersistentVolumeClaim (PVC)** to ensure data persists across container restarts.
 
@@ -242,14 +242,14 @@ spec:
             storage: 1Gi
 ```
 
-## 🚀 Section 3.3: Crafting Kubernetes Manifests for the Application
+## Crafting Kubernetes Manifests for the Application
 
 The **Deployment** manages the application container, connecting to **MongoDB** via the service name (`mongo-service`).  
 The **Service** exposes the application using **NodePort**.
 
 ---
 
-### 📄 deployment.yaml
+### deployment.yaml
 
 ```yaml
 apiVersion: apps/v1
@@ -278,7 +278,7 @@ spec:
               value: "mongodb://mongo-service:27017/kaiburr_db"
 ```
 
-### 📄 service.yaml
+### service.yaml
 
 ```yaml
 apiVersion: v1
@@ -296,7 +296,7 @@ spec:
       nodePort: 30080 # Accessible on the host machine
 ```
 
-## ⚙️ Section 3.4: The Core Challenge: Programmatic Pod Creation
+## The Core Challenge: Programmatic Pod Creation
 
 This section implements the **Operator Pattern** using the Kubernetes Java Client for task execution.
 
@@ -314,7 +314,7 @@ This section implements the **Operator Pattern** using the Kubernetes Java Clien
 
 The application needs a **ServiceAccount**, a **Role** to manage pods (create, get, delete, etc.), and a **RoleBinding** to link them.
 
-### 📄 rbac.yaml
+### rbac.yaml
 
 ```yaml
 apiVersion: v1
@@ -434,7 +434,7 @@ public String executeTaskCommand(String command) throws Exception {
 }
 ```
 
-## 🚀 Section 3.5: Launch and Verification
+## Launch and Verification
 
 1. Push Docker Image (Completed in Section 3.1)  
 2. Deploy to Kubernetes
