@@ -45,4 +45,4 @@ jobs:
         [cite_start]context: . [cite: 260]
         [cite_start]push: true [cite: 260]
         # Replace 'your-dockerhub-username' with your actual username
-        [cite_start]tags: ${{ secrets.DOCKERHUB_USERNAME }}/abhiram007:latest [cite: 260]
+        [cite_start]tags: ${{ secrets.DOCKERHUB_USERNAME }}/kaiburr-task-app:latest [cite: 260]
