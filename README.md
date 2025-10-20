@@ -27,14 +27,16 @@ Before running the application, ensure you have the following installed:
 
 ---
 
+# Task 1 - Engineering a Robust Java REST API 
+
 ## Setup and Running
 
-### 1. Database Configuration
+### Database Configuration
 
 The application is configured to connect to a local MongoDB instance.
 Ensure the following configuration is present in `src/main/resources/application.properties`:
 
-## MongoDB Configuration
+### MongoDB Configuration
 
 ```properties
 spring.data.mongodb.host = localhost
@@ -48,7 +50,7 @@ spring.data.mongodb.database = kaiburr-tasks
 server.port=8081
 ```
 
-## 2. Build the Project
+## Build the Project
 
 Clone the repository:
 
@@ -64,7 +66,7 @@ Open your terminal in the project's root directory (`task-api/`) and run the Mav
 mvn clean install
 ```
 
-## 3. Run the Application
+## Run the Application
 
 Start the Spring Boot application using the generated JAR file:
 
