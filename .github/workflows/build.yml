@@ -29,8 +29,8 @@ jobs:
 
     # Code Build Step
     - name: Build with Maven
-      # The -B flag is for batch mode, and -DskipTests skips running tests
-      run: mvn -B package --file pom.xml -DskipTests
+      # FIX: Corrected the path to pom.xml, assuming it is in a subdirectory named 'task-api'
+      run: mvn -B package --file task-api/pom.xml -DskipTests
 
     # Docker Build and Push Steps
     - name: Log in to Docker Hub
@@ -42,7 +42,7 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v4
       with:
-        context: .
+        # NOTE: If your Dockerfile is NOT in the root, you must change this context line.
+        context: . 
         push: true
-        # Replace 'DOCKERHUB_USERNAME' with your actual username in the tags line
         tags: ${{ secrets.DOCKERHUB_USERNAME }}/kaiburr-task-app:latest
