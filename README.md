@@ -37,13 +37,16 @@ Ensure the following configuration is present in `src/main/resources/application
 ## MongoDB Configuration
 
 ```properties
-spring.data.mongodb.host=localhost
-spring.data.mongodb.port=27017
-spring.data.mongodb.database=kaiburr-tasks
+spring.data.mongodb.host = localhost
+spring.data.mongodb.port = 27017
+spring.data.mongodb.database = kaiburr-tasks
 ```
 
 ## Server Port Configuration 
+
+```properties
 server.port=8081
+```
 
 ## 2. Build the Project
 
