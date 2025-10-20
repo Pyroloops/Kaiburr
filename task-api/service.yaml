@@ -8,7 +8,7 @@ spec:
   selector:
     app: task-api # Must match the 'labels' in your deployment.yaml
   ports:
-    # Service port definition (likely the source of the error near line 9)
+    - protocol: TCP
     - port: 8081      # The port the service itself listens on
       targetPort: 8081 # The port the container exposes (from Dockerfile)
       nodePort: 30080 # The host port to access the service (e.g., http://localhost:30080)
