@@ -473,6 +473,102 @@ curl http://localhost:30080/tasks
 
 <img width="2880" height="1800" alt="image" src="https://github.com/user-attachments/assets/e9b08fc6-b8d6-4861-8b22-bf5ea9ab6cfc" />
 
+# Task 4: Automated CI/CD Pipeline
+
+This project utilizes **GitHub Actions** to implement a Continuous Integration (CI) pipeline. This automation ensures that every code change pushed to the main branch is automatically built, tested, and packaged into a versioned Docker image, which is then pushed to Docker Hub.  
+
+This approach separates the **CI (Build/Package)** phase from the **CD (Deployment)** phase, aligning with modern DevOps best practices.
+
+## 1. Prerequisites
+
+To ensure the pipeline runs successfully, you must complete the following setup steps:
+
+### 1.1 Docker Hub Credentials
+
+The pipeline needs credentials to log into Docker Hub and push the final image artifact. These credentials must be securely stored as GitHub Repository Secrets.
+
+1. Generate a Personal Access Token (PAT) from your Docker Hub account settings with **Read & Write** permissions.  
+2. In your GitHub repository, navigate to **Settings → Secrets and variables → Actions**.  
+3. Add the following two repository secrets:  
+
+- `DOCKERHUB_USERNAME`: Your Docker Hub username.  
+- `DOCKERHUB_TOKEN`: The Personal Access Token you generated (used as the password).
+
+### 1.2 Project Structure
+
+The pipeline assumes the following file locations for the Java API project:
+
+- The main Maven configuration file (`pom.xml`) is located in the **root directory** of the repository (or adjusted path).  
+- The Docker packaging instructions (`Dockerfile`) are located in the **root directory** of the repository (or adjusted path).
+
+## 2. CI Workflow (.github/workflows/build.yml)
+
+The workflow file is defined at `.github/workflows/build.yml`. It executes a single job, `build-and-push`, which performs four main tasks:
+
+| Step Name               | Purpose                                                         | Action Used / Command        |
+|-------------------------|-----------------------------------------------------------------|-----------------------------|
+| Set up JDK 17           | Configures the runner environment with the required Java 17 LTS version. | `actions/setup-java`        |
+| Cache Maven packages    | Caches Maven dependencies to significantly speed up future builds. | `actions/cache`             |
+| Build with Maven        | Compiles the Java application and packages it into a runnable JAR file. | `mvn -B package ...`        |
+| Log in to Docker Hub    | Authenticates against Docker Hub using the configured GitHub Secrets. | `docker/login-action`       |
+| Build and push Docker image | Builds the Docker image based on the local Dockerfile and pushes the final version to Docker Hub. | `docker/build-push-action` |
+
+### Workflow Code
+
+The current, functional version of the workflow file is:
+
+```yaml
+name: Java CI with Maven and Docker 
+
+on: 
+  push: 
+    branches: [ "main" ] 
+
+jobs: 
+  build-and-push: 
+    runs-on: ubuntu-latest 
+    steps: 
+        - name: Checkout repository 
+          uses: actions/checkout@v3 
+
+        - name: Set up JDK 17 
+          uses: actions/setup-java@v3 
+          with: 
+            java-version: '17' 
+            distribution: 'temurin' 
+
+        - name: Cache Maven packages 
+          uses: actions/cache@v3 
+          with: 
+            path: ~/.m2 
+            key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }} 
+            restore-keys: | 
+              ${{ runner.os }}-m2- 
+
+        - name: Build with Maven 
+          run: mvn -B package --file pom.xml -DskipTests 
+
+        - name: Log in to Docker Hub 
+          uses: docker/login-action@v2 
+          with: 
+            username: ${{ secrets.DOCKERHUB_USERNAME }} 
+            password: ${{ secrets.DOCKERHUB_TOKEN }} 
+
+        - name: Build and push Docker image 
+          uses: docker/build-push-action@v4 
+          with: 
+            context:. 
+            push: true 
+            tags: ${{ secrets.DOCKERHUB_USERNAME }}/kaiburr-task-app:latest
+```
+
+## 3. Usage and Verification
+
+- **Trigger:** Push any code changes (or the workflow file itself) to the `main` branch.  
+- **Monitor:** Go to the **Actions** tab on GitHub to monitor the workflow run status.  
+- **Artifact:** Upon successful completion, the new Docker image will be available in your Docker Hub repository with the tag `latest` (and potentially other tags you define).  
+- **Status:** The overall workflow status can be viewed directly on the **Actions** tab, showing a green checkmark for success.
+
 
 
 
