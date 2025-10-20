@@ -53,7 +53,7 @@ server.port=8081
 Clone the repository:
 
 ```bash
-git clone [https://github.com/TwsitedWizard/kaiburr-backend-assessment.git](https://github.com/TwsitedWizard/kaiburr-backend-assessment.git)
+git clone https://github.com/Pyroloops/Kaiburr.git
 cd kaiburr-backend-assessment/task-api
 ```
 Ensure MongoDB is running: Make sure your local MongoDB server is active on the default port 27017.
