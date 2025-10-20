@@ -34,13 +34,13 @@ Before running the application, ensure you have the following installed:
 The application is configured to connect to a local MongoDB instance.
 Ensure the following configuration is present in `src/main/resources/application.properties`:
 
-# MongoDB Configuration
+## MongoDB Configuration
 
 spring.data.mongodb.host=localhost
 spring.data.mongodb.port=27017
 spring.data.mongodb.database=kaiburr-tasks
 
-# Server Port Configuration (Set to 8081 to avoid conflicts)
+## Server Port Configuration 
 server.port=8081
 
 ## 2. Build the Project
